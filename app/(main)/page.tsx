@@ -12,8 +12,10 @@ export default function HomePage() {
   const { products, vendors } = useStore()
   
   // Get product counts by category
-  const getCategoryProductCount = (categoryId: string) => {
-    return products.filter(p => p.category === categoryId).length
+const getCategoryProductCount = (categoryName: string) => {
+    return products.filter(p =>
+      p.category.toLowerCase() === categoryName.toLowerCase()
+    ).length
   }
   
   // Get latest products (up to 8)
