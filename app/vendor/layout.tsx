@@ -1,180 +1,110 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import Link from "next/link"
+import { useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
-import { 
-  Store, 
-  LayoutDashboard, 
-  Package, 
-  ShoppingBag, 
-  BarChart3, 
-  Settings, 
-  Plus, 
-  Menu,
-  X,
-  LogOut
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Separator } from "@/components/ui/separator"
+import Link from "next/link"
+import { LayoutDashboard, Package, ShoppingBag, BarChart2, Settings, LogOut, Leaf, PlusCircle } from "lucide-react"
 import { useStore } from "@/lib/store"
-import { cn } from "@/lib/utils"
 
-const sidebarLinks = [
+const navItems = [
   { href: "/vendor/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/vendor/products", label: "Products", icon: Package },
+  { href: "/vendor/products", label: "My Products", icon: Package },
+  { href: "/vendor/products/add", label: "Add Product", icon: PlusCircle },
   { href: "/vendor/orders", label: "Orders", icon: ShoppingBag },
-  { href: "/vendor/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/vendor/analytics", label: "Analytics", icon: BarChart2 },
   { href: "/vendor/settings", label: "Settings", icon: Settings },
 ]
 
-function SidebarContent({ onLinkClick }: { onLinkClick?: () => void }) {
-  const pathname = usePathname()
-  const { currentUser, getVendorByUserId, signOut } = useStore()
+export default function VendorLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
-  
-  const vendor = currentUser ? getVendorByUserId(currentUser.id) : null
-  
+  const pathname = usePathname()
+  const { isAuthenticated, currentUser, signOut } = useStore()
+
+  useEffect(() => {
+    if (pathname === "/vendor/register") return
+    if (!isAuthenticated) {
+      router.push("/auth/signin")
+    }
+  }, [isAuthenticated, pathname, router])
+
   const handleSignOut = () => {
     signOut()
     router.push("/")
   }
-  
-  return (
-    <div className="flex flex-col h-full">
-      <div className="p-4">
-        <Link href="/" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <Store className="h-5 w-5 text-primary-foreground" />
-          </div>
-          <span className="text-xl font-bold text-primary">AgroLink</span>
-        </Link>
-      </div>
-      
-      <Separator />
-      
-      {vendor && (
-        <div className="p-4">
-          <p className="font-semibold text-sm truncate">{vendor.businessName}</p>
-          <p className="text-xs text-muted-foreground truncate">{vendor.email}</p>
-        </div>
-      )}
-      
-      <nav className="flex-1 p-4 space-y-1">
-        {sidebarLinks.map((link) => {
-          const isActive = pathname === link.href || pathname.startsWith(link.href + "/")
-          return (
-            <Link
-              key={link.href}
-              href={link.href}
-              onClick={onLinkClick}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
-                isActive 
-                  ? "bg-primary text-primary-foreground" 
-                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-              )}
-            >
-              <link.icon className="h-4 w-4" />
-              {link.label}
-            </Link>
-          )
-        })}
-        
-        <Link
-          href="/vendor/products/add"
-          onClick={onLinkClick}
-          className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm bg-primary/10 text-primary hover:bg-primary/20 transition-colors mt-4"
-        >
-          <Plus className="h-4 w-4" />
-          Add Product
-        </Link>
-      </nav>
-      
-      <Separator />
-      
-      <div className="p-4">
-        <Button 
-          variant="ghost" 
-          className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
-          onClick={handleSignOut}
-        >
-          <LogOut className="mr-2 h-4 w-4" />
-          Sign Out
-        </Button>
-      </div>
-    </div>
-  )
-}
 
-export default function VendorLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  const router = useRouter()
-  const { currentUser, isAuthenticated, getVendorByUserId } = useStore()
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [mounted, setMounted] = useState(false)
-  
-  useEffect(() => {
-    setMounted(true)
-  }, [])
-  
-  useEffect(() => {
-    if (!mounted) return
-    
-    if (!isAuthenticated || !currentUser) {
-      router.push("/auth/signin")
-      return
-    }
-    
-    if (currentUser.role !== "vendor") {
-      router.push("/")
-      return
-    }
-    
-    const vendor = getVendorByUserId(currentUser.id)
-    const pathname = window.location.pathname
-    
-    if (!vendor && !pathname.includes("/vendor/register")) {
-      router.push("/vendor/register")
-    }
-  }, [mounted, isAuthenticated, currentUser, router, getVendorByUserId])
-  
-  if (!mounted) {
-    return null
+  if (pathname === "/vendor/register") {
+    return <>{children}</>
   }
-  
+
   return (
-    <div className="flex min-h-screen">
-      {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex w-64 flex-col border-r bg-card">
-        <SidebarContent />
+    <div className="flex min-h-screen bg-background">
+      {/* Sidebar */}
+      <aside className="w-64 border-r bg-card hidden md:flex flex-col">
+        <div className="p-6 border-b">
+          <Link href="/" className="flex items-center gap-2">
+            <Leaf className="h-6 w-6 text-primary" />
+            <span className="font-bold text-lg">AgroLink</span>
+          </Link>
+          <p className="text-xs text-muted-foreground mt-1">Vendor Dashboard</p>
+        </div>
+
+        {currentUser && (
+          <div className="p-4 border-b">
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
+                {currentUser.name?.charAt(0).toUpperCase()}
+              </div>
+              <div className="overflow-hidden">
+                <p className="text-sm font-medium truncate">{currentUser.name}</p>
+                <p className="text-xs text-muted-foreground truncate">{currentUser.email}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <nav className="flex-1 p-4 space-y-1">
+          {navItems.map((item) => {
+            const Icon = item.icon
+            const isActive = pathname === item.href
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                  isActive
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                }`}
+              >
+                <Icon className="h-4 w-4 flex-shrink-0" />
+                {item.label}
+              </Link>
+            )
+          })}
+        </nav>
+
+        <div className="p-4 border-t">
+          <button
+            onClick={handleSignOut}
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors w-full"
+          >
+            <LogOut className="h-4 w-4" />
+            Sign Out
+          </button>
+        </div>
       </aside>
-      
-      {/* Mobile Sidebar */}
-      <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-        <SheetContent side="left" className="p-0 w-64">
-          <SidebarContent onLinkClick={() => setSidebarOpen(false)} />
-        </SheetContent>
-      </Sheet>
-      
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col">
-        {/* Mobile Header */}
-        <header className="lg:hidden flex items-center gap-4 border-b px-4 h-14">
-          <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(true)}>
-            <Menu className="h-5 w-5" />
-          </Button>
-          <span className="font-semibold">Vendor Dashboard</span>
-        </header>
-        
-        <main className="flex-1 p-4 md:p-6 lg:p-8 bg-muted/30">
-          {children}
-        </main>
-      </div>
+
+      {/* Main content */}
+      <main className="flex-1 overflow-auto">
+        {/* Mobile header */}
+        <div className="md:hidden flex items-center justify-between p-4 border-b bg-card">
+          <Link href="/" className="flex items-center gap-2">
+            <Leaf className="h-5 w-5 text-primary" />
+            <span className="font-bold">AgroLink Vendor</span>
+          </Link>
+        </div>
+        {children}
+      </main>
     </div>
   )
 }
