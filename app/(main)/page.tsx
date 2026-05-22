@@ -117,7 +117,7 @@ const getCategoryProductCount = (categoryName: string) => {
                     <div className="flex items-start justify-between mb-4">
                       <span className="text-4xl">{category.icon}</span>
                       <Badge variant="secondary">
-                        {getCategoryProductCount(category.id)} products
+                        {getCategoryProductCount(category.name)} products
                       </Badge>
                     </div>
                     <h3 className="text-xl font-semibold mb-2 group-hover:text-primary transition-colors">
