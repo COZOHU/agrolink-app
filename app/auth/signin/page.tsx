@@ -1,188 +1,82 @@
 "use client"
-
 import { useState } from "react"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { Store, Eye, EyeOff, Loader2 } from "lucide-react"
+import Link from "next/link"
+import { Leaf } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { toast } from "sonner"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { useStore } from "@/lib/store"
 
 export default function SignInPage() {
   const router = useRouter()
   const { signIn } = useStore()
-  
-  const [isLoading, setIsLoading] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
-  
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-    role: "buyer" as "buyer" | "vendor",
-  })
-  
-  const [errors, setErrors] = useState<Record<string, string>>({})
-  
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {}
-    
-    if (!formData.email.trim()) {
-      newErrors.email = "Email is required"
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Invalid email format"
-    }
-    
-    if (!formData.password) {
-      newErrors.password = "Password is required"
-    }
-    
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
-  
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+  const [form, setForm] = useState({ email: "", password: "", role: "buyer" as "buyer" | "vendor" })
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    if (!validateForm()) return
-    
-    setIsLoading(true)
-    
-    try {
-      const result = await signIn(formData.email, formData.password, formData.role)
-      
-      if (result.success) {
-        toast.success("Welcome back!")
-        if (formData.role === "vendor") {
-          router.push("/vendor/dashboard")
-        } else {
-          router.push("/marketplace")
-        }
-      } else {
-        toast.error(result.message)
-      }
-    } catch {
-      toast.error("Something went wrong. Please try again.")
-    } finally {
-      setIsLoading(false)
-    }
+    setLoading(true); setError("")
+    const result = await signIn(form.email, form.password, form.role)
+    setLoading(false)
+    if (result.success) router.push(form.role === "vendor" ? "/vendor/dashboard" : "/marketplace")
+    else setError(result.message)
   }
-  
+
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader className="text-center">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary">
-          <Store className="h-6 w-6 text-primary-foreground" />
-        </div>
-        <CardTitle className="text-2xl">Welcome Back</CardTitle>
-        <CardDescription>
-          Sign in to your AgroLink account
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="role">Sign in as</Label>
-            <RadioGroup
-              value={formData.role}
-              onValueChange={(value: "buyer" | "vendor") => 
-                setFormData(prev => ({ ...prev, role: value }))
-              }
-              className="grid grid-cols-2 gap-4"
-            >
-              <div>
-                <RadioGroupItem
-                  value="buyer"
-                  id="buyer"
-                  className="peer sr-only"
-                />
-                <Label
-                  htmlFor="buyer"
-                  className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
-                >
-                  <span className="font-semibold">Buyer</span>
-                  <span className="text-xs text-muted-foreground">Shop products</span>
-                </Label>
-              </div>
-              <div>
-                <RadioGroupItem
-                  value="vendor"
-                  id="vendor"
-                  className="peer sr-only"
-                />
-                <Label
-                  htmlFor="vendor"
-                  className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
-                >
-                  <span className="font-semibold">Vendor</span>
-                  <span className="text-xs text-muted-foreground">Sell products</span>
-                </Label>
-              </div>
-            </RadioGroup>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="you@example.com"
-              value={formData.email}
-              onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-            />
-            {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                placeholder="Enter your password"
-                value={formData.password}
-                onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? (
-                  <EyeOff className="h-4 w-4 text-muted-foreground" />
-                ) : (
-                  <Eye className="h-4 w-4 text-muted-foreground" />
-                )}
-              </Button>
+    <div className="min-h-screen bg-background flex items-center justify-center py-12 px-4">
+      <Card className="w-full max-w-md">
+        <CardHeader className="text-center">
+          <div className="flex justify-center mb-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+              <Leaf className="h-6 w-6 text-primary" />
             </div>
-            {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
           </div>
-          
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Sign In
-          </Button>
-          
-          <div className="text-center text-sm">
-            <span className="text-muted-foreground">{"Don't have an account?"} </span>
-            <Link href="/auth/signup" className="text-primary hover:underline font-medium">
-              Sign up
-            </Link>
-          </div>
-          
-          <div className="text-center text-sm">
-            <span className="text-muted-foreground">Are you a vendor? </span>
-            <Link href="/vendor/register" className="text-primary hover:underline font-medium">
-              Register here
-            </Link>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+          <CardTitle className="text-2xl">Welcome Back</CardTitle>
+          <CardDescription>Sign in to your AgroLink account</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {error && <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">{error}</div>}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Signing in as</Label>
+              <div className="grid grid-cols-2 gap-3">
+                {(["buyer", "vendor"] as const).map(r => (
+                  <button key={r} type="button" onClick={() => setForm({ ...form, role: r })}
+                    className={`p-3 rounded-lg border text-sm font-medium transition-colors ${form.role === r ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/50"}`}>
+                    {r === "buyer" ? "🛒 Buyer" : "🌾 Vendor"}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email Address</Label>
+              <Input id="email" name="email" type="email" placeholder="you@example.com"
+                value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input id="password" name="password" type="password" placeholder="Your password"
+                value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} required />
+            </div>
+            <div className="p-3 rounded-lg bg-blue-50 border border-blue-200 text-blue-800 text-xs space-y-1">
+              <p className="font-semibold">Demo Vendor Accounts (any password):</p>
+              <p>greenvalley@example.com</p>
+              <p>sunrise@example.com</p>
+              <p>harvestking@example.com</p>
+            </div>
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Signing in..." : "Sign In"}
+            </Button>
+          </form>
+          <p className="text-center text-sm text-muted-foreground mt-4">
+            Don&apos;t have an account?{" "}
+            <Link href="/auth/signup" className="text-primary hover:underline font-medium">Sign up</Link>
+          </p>
+        </CardContent>
+      </Card>
+    </div>
   )
 }
