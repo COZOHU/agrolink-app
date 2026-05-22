@@ -1,159 +1,78 @@
 "use client"
-
-import { useMemo } from "react"
+import { useEffect } from "react"
 import Link from "next/link"
-import Image from "next/image"
-import { Package, Clock, CheckCircle, Truck, XCircle } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { useStore } from "@/lib/store"
 import { useRouter } from "next/navigation"
+import { ShoppingBag, ArrowRight } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { useStore } from "@/lib/store"
 
-const statusConfig = {
-  pending: { icon: Clock, color: "bg-yellow-500", label: "Pending" },
-  confirmed: { icon: CheckCircle, color: "bg-blue-500", label: "Confirmed" },
-  processing: { icon: Package, color: "bg-purple-500", label: "Processing" },
-  shipped: { icon: Truck, color: "bg-cyan-500", label: "Shipped" },
-  delivered: { icon: CheckCircle, color: "bg-green-500", label: "Delivered" },
-  cancelled: { icon: XCircle, color: "bg-red-500", label: "Cancelled" },
+const STATUS_COLORS: Record<string, string> = {
+  pending: "bg-yellow-100 text-yellow-700", confirmed: "bg-blue-100 text-blue-700",
+  processing: "bg-purple-100 text-purple-700", shipped: "bg-indigo-100 text-indigo-700",
+  delivered: "bg-green-100 text-green-700", cancelled: "bg-red-100 text-red-700",
 }
 
 export default function OrdersPage() {
   const router = useRouter()
-  const { orders, products, currentUser } = useStore()
+  const { orders, products, currentUser, isAuthenticated } = useStore()
 
-  // Redirect if not logged in
-  if (!currentUser) {
-    router.push("/auth/signin?redirect=/orders")
-    return null
-  }
+  useEffect(() => { if (!isAuthenticated) router.push("/auth/signin") }, [isAuthenticated, router])
 
-  const userOrders = useMemo(() => {
-    return orders
-      .filter(o => o.userId === currentUser.id)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-  }, [orders, currentUser])
-
-  const getProduct = (productId: string) => products.find(p => p.id === productId)
-
-  if (userOrders.length === 0) {
-    return (
-      <div className="min-h-screen bg-background py-12">
-        <div className="container mx-auto px-4">
-          <Card className="max-w-md mx-auto text-center py-12">
-            <CardContent>
-              <Package className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-              <h2 className="text-2xl font-bold mb-2">No orders yet</h2>
-              <p className="text-muted-foreground mb-6">
-                You haven&apos;t placed any orders yet. Start shopping to see your orders here.
-              </p>
-              <Link href="/marketplace">
-                <Button size="lg">Start Shopping</Button>
-              </Link>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    )
-  }
+  const myOrders = orders
+    .filter(o => o.userId === currentUser?.id)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
   return (
-    <div className="min-h-screen bg-background py-8">
-      <div className="container mx-auto px-4">
-        <h1 className="text-3xl font-bold mb-8">My Orders</h1>
-
-        <div className="space-y-6">
-          {userOrders.map(order => {
-            const status = statusConfig[order.status]
-            const StatusIcon = status.icon
-
-            return (
-              <Card key={order.id}>
-                <CardHeader className="pb-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="container mx-auto px-4 py-8 max-w-3xl">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold">My Orders</h1>
+          <p className="text-muted-foreground text-sm">{myOrders.length} order{myOrders.length !== 1 ? "s" : ""}</p>
+        </div>
+        <Link href="/marketplace"><Button variant="outline">Continue Shopping</Button></Link>
+      </div>
+      {myOrders.length === 0 ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <ShoppingBag className="h-16 w-16 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No orders yet</h3>
+            <p className="text-muted-foreground text-sm mb-6">Your purchases will appear here</p>
+            <Link href="/marketplace"><Button>Shop Now</Button></Link>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {myOrders.map(order => (
+            <Link key={order.id} href={`/orders/${order.id}`}>
+              <Card className="hover:shadow-md transition-shadow cursor-pointer">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between mb-3">
                     <div>
-                      <CardTitle className="text-lg">Order #{order.id.slice(0, 8)}</CardTitle>
-                      <p className="text-sm text-muted-foreground">
-                        Placed on {new Date(order.createdAt).toLocaleDateString("en-US", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })}
-                      </p>
+                      <p className="font-medium">Order #{order.id.slice(0, 8).toUpperCase()}</p>
+                      <p className="text-xs text-muted-foreground">{new Date(order.createdAt).toLocaleDateString("en-NG", { day: "numeric", month: "long", year: "numeric" })}</p>
                     </div>
-                    <Badge className={`${status.color} text-white`}>
-                      <StatusIcon className="h-4 w-4 mr-1" />
-                      {status.label}
-                    </Badge>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${STATUS_COLORS[order.status]}`}>
+                      {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                    </span>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {order.items.map((item, index) => {
-                      const product = getProduct(item.productId)
-                      if (!product) return null
-
-                      return (
-                        <div key={index} className="flex gap-4">
-                          <div className="relative h-20 w-20 rounded-lg overflow-hidden flex-shrink-0">
-                            <Image
-                              src={product.images[0] || "/placeholder.svg"}
-                              alt={product.name}
-                              fill
-                              className="object-cover"
-                            />
-                          </div>
-                          <div className="flex-1">
-                            <Link href={`/products/${product.id}`}>
-                              <h4 className="font-medium hover:text-primary transition-colors">
-                                {product.name}
-                              </h4>
-                            </Link>
-                            <p className="text-sm text-muted-foreground">
-                              Qty: {item.quantity} x NGN {item.price.toLocaleString()}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-medium">
-                              NGN {(item.price * item.quantity).toLocaleString()}
-                            </p>
-                          </div>
-                        </div>
-                      )
+                  <div className="flex gap-1 mb-3 flex-wrap">
+                    {order.items.slice(0, 3).map(item => {
+                      const product = products.find(p => p.id === item.productId)
+                      return product ? <span key={item.productId} className="text-xs bg-muted px-2 py-1 rounded">{product.name} ×{item.quantity}</span> : null
                     })}
+                    {order.items.length > 3 && <span className="text-xs bg-muted px-2 py-1 rounded">+{order.items.length - 3} more</span>}
                   </div>
-
-                  <div className="border-t mt-4 pt-4">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Delivery Address</p>
-                        <p className="text-sm">
-                          {order.shippingDetails.address}, {order.shippingDetails.city}, {order.shippingDetails.state}
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm text-muted-foreground">Order Total</p>
-                        <p className="text-xl font-bold text-primary">
-                          NGN {order.total.toLocaleString()}
-                        </p>
-                      </div>
-                    </div>
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-primary">₦{order.total.toLocaleString()}</span>
+                    <span className="text-xs text-primary flex items-center gap-1">Track Order <ArrowRight className="h-3 w-3" /></span>
                   </div>
-
-                  {order.status === "delivered" && (
-                    <div className="mt-4">
-                      <Button variant="outline" size="sm">
-                        Write a Review
-                      </Button>
-                    </div>
-                  )}
                 </CardContent>
               </Card>
-            )
-          })}
+            </Link>
+          ))}
         </div>
-      </div>
+      )}
     </div>
   )
 }
