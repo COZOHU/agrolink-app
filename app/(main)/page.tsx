@@ -180,7 +180,7 @@ export default function HomePage() {
                           {product.name}
                         </h3>
                         <p className="text-xs text-muted-foreground truncate mb-2">
-                          {vendor?.businessName || "Unknown Vendor"}
+                         {vendor?.farmName || "Unknown Vendor"}
                         </p>
                         <div className="flex items-center justify-between">
                           <span className="text-primary font-bold">
