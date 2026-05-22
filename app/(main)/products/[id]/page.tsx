@@ -1,175 +1,125 @@
 "use client"
 
-import { use, useState } from "react"
+import { useState } from "react"
+import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
-import { 
-  Heart, 
-  ShoppingCart, 
-  Star, 
-  MapPin, 
-  Minus, 
-  Plus, 
-  Share2, 
-  Truck, 
-  Shield, 
-  RotateCcw,
-  BadgeCheck,
-  ChevronLeft,
-  ChevronRight
+import {
+  Heart, ShoppingCart, ArrowLeft, Star, Package,
+  MapPin, Shield, Truck, Share2, Plus, Minus
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Separator } from "@/components/ui/separator"
+import { Card, CardContent } from "@/components/ui/card"
 import { useStore } from "@/lib/store"
-import { notFound } from "next/navigation"
-import { useToast } from "@/hooks/use-toast"
 
-export default function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params)
-  const { products, vendors, currentUser, addToCart, toggleLike, likedProducts } = useStore()
-  const { toast } = useToast()
-  
+export default function ProductDetailPage() {
+  const params = useParams()
+  const router = useRouter()
+  const { products, vendors, likedProducts, toggleLike, addToCart, isAuthenticated } = useStore()
   const [quantity, setQuantity] = useState(1)
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0)
+  const [selectedImage, setSelectedImage] = useState(0)
+  const [addedToCart, setAddedToCart] = useState(false)
 
-  const product = products.find(p => p.id === id)
+  const product = products.find(p => p.id === params.id)
   const vendor = product ? vendors.find(v => v.id === product.vendorId) : null
-  const isLiked = likedProducts.includes(id)
+  const isLiked = product ? likedProducts.includes(product.id) : false
 
-  if (!product) {
-    notFound()
-  }
-
-  // Related products from same vendor or category
+  // Related products — same category, different product
   const relatedProducts = products
-    .filter(p => p.id !== id && (p.vendorId === product.vendorId || p.category === product.category) && p.status === "active")
+    .filter(p => p.category === product?.category && p.id !== product?.id && p.status === "active")
     .slice(0, 4)
 
+  if (!product) {
+    return (
+      <div className="container mx-auto px-4 py-16 text-center">
+        <Package className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
+        <h2 className="text-2xl font-bold mb-2">Product Not Found</h2>
+        <p className="text-muted-foreground mb-6">This product may have been removed or doesn&apos;t exist.</p>
+        <Link href="/marketplace">
+          <Button>Back to Marketplace</Button>
+        </Link>
+      </div>
+    )
+  }
+
   const handleAddToCart = () => {
-    if (!currentUser) {
-      window.location.href = "/auth/signin"
-      return
-    }
     addToCart(product.id, quantity)
-    toast({
-      title: "Added to cart",
-      description: `${quantity} x ${product.name} added to your cart`,
-    })
+    setAddedToCart(true)
+    setTimeout(() => setAddedToCart(false), 2500)
   }
 
-  const handleToggleLike = () => {
-    if (!currentUser) {
-      window.location.href = "/auth/signin"
-      return
-    }
-    toggleLike(product.id)
-    toast({
-      title: isLiked ? "Removed from wishlist" : "Added to wishlist",
-      description: isLiked ? `${product.name} removed from your wishlist` : `${product.name} added to your wishlist`,
-    })
+  const handleBuyNow = () => {
+    addToCart(product.id, quantity)
+    router.push("/cart")
   }
 
-  const handleShare = async () => {
+  const handleShare = () => {
     if (navigator.share) {
-      await navigator.share({
-        title: product.name,
-        text: product.description,
-        url: window.location.href,
-      })
+      navigator.share({ title: product.name, url: window.location.href })
     } else {
-      await navigator.clipboard.writeText(window.location.href)
-      toast({
-        title: "Link copied",
-        description: "Product link copied to clipboard",
-      })
+      navigator.clipboard.writeText(window.location.href)
+      alert("Link copied to clipboard!")
     }
   }
 
-  const nextImage = () => {
-    setSelectedImageIndex((prev) => 
-      prev === product.images.length - 1 ? 0 : prev + 1
-    )
-  }
-
-  const prevImage = () => {
-    setSelectedImageIndex((prev) => 
-      prev === 0 ? product.images.length - 1 : prev - 1
-    )
-  }
+  const images = product.images.length > 0
+    ? product.images
+    : ["https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=600&h=600&fit=crop"]
 
   return (
-    <div className="min-h-screen bg-background py-8">
-      <div className="container mx-auto px-4">
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-6">
+
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-          <Link href="/" className="hover:text-primary">Home</Link>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
+          <Link href="/" className="hover:text-foreground">Home</Link>
           <span>/</span>
-          <Link href="/marketplace" className="hover:text-primary">Marketplace</Link>
+          <Link href="/marketplace" className="hover:text-foreground">Marketplace</Link>
           <span>/</span>
-          <Link href={`/marketplace?category=${product.category}`} className="hover:text-primary">
+          <Link href={`/marketplace?category=${product.category.toLowerCase()}`} className="hover:text-foreground">
             {product.category}
           </Link>
           <span>/</span>
-          <span className="text-foreground">{product.name}</span>
-        </nav>
+          <span className="text-foreground truncate max-w-32">{product.name}</span>
+        </div>
 
-        <div className="grid lg:grid-cols-2 gap-8 mb-12">
-          {/* Product Images */}
-          <div className="space-y-4">
-            <div className="relative aspect-square rounded-lg overflow-hidden bg-muted">
+        <div className="grid md:grid-cols-2 gap-8 mb-12">
+          {/* Images */}
+          <div className="space-y-3">
+            <div className="aspect-square relative rounded-2xl overflow-hidden bg-muted">
               <Image
-                src={product.images[selectedImageIndex] || "/placeholder.svg"}
+                src={images[selectedImage]}
                 alt={product.name}
                 fill
                 className="object-cover"
+                priority
               />
               {product.organic && (
-                <Badge className="absolute top-4 left-4 bg-green-600">
-                  Organic
-                </Badge>
+                <Badge className="absolute top-4 left-4 bg-green-600 text-white">🌿 Organic</Badge>
               )}
-              {product.images.length > 1 && (
-                <>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white"
-                    onClick={prevImage}
-                  >
-                    <ChevronLeft className="h-6 w-6" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white"
-                    onClick={nextImage}
-                  >
-                    <ChevronRight className="h-6 w-6" />
-                  </Button>
-                </>
+              {product.stock === 0 && (
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                  <Badge variant="destructive" className="text-lg px-4 py-2">Out of Stock</Badge>
+                </div>
               )}
+              <button
+                onClick={() => toggleLike(product.id)}
+                className="absolute top-4 right-4 h-10 w-10 rounded-full bg-white/90 shadow flex items-center justify-center hover:bg-white transition-colors"
+              >
+                <Heart className={`h-5 w-5 ${isLiked ? "fill-red-500 text-red-500" : "text-gray-600"}`} />
+              </button>
             </div>
-            
-            {/* Thumbnail Gallery */}
-            {product.images.length > 1 && (
-              <div className="flex gap-2 overflow-x-auto pb-2">
-                {product.images.map((image, index) => (
+            {/* Thumbnail strip */}
+            {images.length > 1 && (
+              <div className="flex gap-2">
+                {images.map((img, i) => (
                   <button
-                    key={index}
-                    onClick={() => setSelectedImageIndex(index)}
-                    className={`relative h-20 w-20 flex-shrink-0 rounded-lg overflow-hidden border-2 transition-colors ${
-                      index === selectedImageIndex ? "border-primary" : "border-transparent"
-                    }`}
+                    key={i}
+                    onClick={() => setSelectedImage(i)}
+                    className={`h-16 w-16 rounded-lg overflow-hidden border-2 transition-colors ${selectedImage === i ? "border-primary" : "border-transparent"}`}
                   >
-                    <Image
-                      src={image}
-                      alt={`${product.name} ${index + 1}`}
-                      fill
-                      className="object-cover"
-                    />
+                    <Image src={img} alt={`${product.name} ${i + 1}`} width={64} height={64} className="object-cover w-full h-full" />
                   </button>
                 ))}
               </div>
@@ -177,300 +127,206 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
           </div>
 
           {/* Product Info */}
-          <div>
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <Badge variant="secondary" className="mb-2">
-                  {product.category}
+          <div className="space-y-5">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Badge variant="secondary">{product.category}</Badge>
+                {product.organic && <Badge className="bg-green-100 text-green-700 hover:bg-green-100">Organic</Badge>}
+                <Badge variant={product.status === "active" ? "default" : "destructive"}>
+                  {product.status === "active" ? "In Stock" : product.status.replace("_", " ")}
                 </Badge>
-                <h1 className="text-2xl md:text-3xl font-bold">{product.name}</h1>
               </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={handleToggleLike}
-                >
-                  <Heart className={`h-5 w-5 ${isLiked ? "fill-red-500 text-red-500" : ""}`} />
-                </Button>
-                <Button variant="outline" size="icon" onClick={handleShare}>
-                  <Share2 className="h-5 w-5" />
-                </Button>
+              <h1 className="text-2xl md:text-3xl font-bold mb-2">{product.name}</h1>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="flex items-center gap-1">
+                  {[1,2,3,4,5].map(star => (
+                    <Star key={star} className={`h-4 w-4 ${star <= Math.floor(product.rating) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`} />
+                  ))}
+                  <span className="text-sm font-medium ml-1">{product.rating}</span>
+                </div>
+                <span className="text-sm text-muted-foreground">({product.reviews} reviews)</span>
+                <button onClick={() => toggleLike(product.id)} className="flex items-center gap-1 text-sm text-muted-foreground hover:text-red-500 transition-colors">
+                  <Heart className={`h-4 w-4 ${isLiked ? "fill-red-500 text-red-500" : ""}`} />
+                  {isLiked ? "Liked" : "Like"}
+                </button>
               </div>
-            </div>
-
-            {/* Rating */}
-            <div className="flex items-center gap-2 mt-4">
-              <div className="flex items-center">
-                {[...Array(5)].map((_, i) => (
-                  <Star
-                    key={i}
-                    className={`h-5 w-5 ${
-                      i < Math.floor(product.rating)
-                        ? "fill-yellow-400 text-yellow-400"
-                        : "text-gray-300"
-                    }`}
-                  />
-                ))}
-              </div>
-              <span className="font-medium">{product.rating.toFixed(1)}</span>
-              <span className="text-muted-foreground">({product.reviews} reviews)</span>
-            </div>
-
-            {/* Price */}
-            <div className="mt-6">
               <div className="flex items-baseline gap-2">
-                <span className="text-3xl font-bold text-primary">
-                  NGN {product.price.toLocaleString()}
-                </span>
+                <span className="text-3xl font-bold text-primary">₦{product.price.toLocaleString()}</span>
                 <span className="text-muted-foreground">per {product.unit}</span>
               </div>
-              {product.stock > 0 ? (
-                <Badge variant="outline" className="mt-2 text-green-600 border-green-600">
-                  In Stock ({product.stock} available)
-                </Badge>
-              ) : (
-                <Badge variant="destructive" className="mt-2">
-                  Out of Stock
-                </Badge>
-              )}
             </div>
 
-            {/* Description */}
-            <p className="text-muted-foreground mt-6">
-              {product.description}
-            </p>
+            {/* Stock indicator */}
+            <div className="flex items-center gap-2 text-sm">
+              <div className={`h-2 w-2 rounded-full ${product.stock > 10 ? "bg-green-500" : product.stock > 0 ? "bg-orange-400" : "bg-red-500"}`} />
+              <span className={product.stock === 0 ? "text-red-600" : product.stock < 10 ? "text-orange-600" : "text-green-600"}>
+                {product.stock === 0 ? "Out of stock" : product.stock < 10 ? `Only ${product.stock} left` : `${product.stock} in stock`}
+              </span>
+            </div>
 
-            {/* Vendor Info */}
-            {vendor && (
-              <Link href={`/vendors/${vendor.id}`}>
-                <Card className="mt-6 p-4 hover:shadow-md transition-shadow">
-                  <div className="flex items-center gap-4">
-                    <div className="relative h-12 w-12 rounded-full overflow-hidden">
-                      <Image
-                        src={vendor.avatar || "/placeholder.svg"}
-                        alt={vendor.farmName}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold">{vendor.farmName}</span>
-                        {vendor.verified && (
-                          <BadgeCheck className="h-4 w-4 text-blue-500" />
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <MapPin className="h-4 w-4" />
-                        {vendor.location}
-                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400 ml-2" />
-                        {vendor.rating.toFixed(1)}
-                      </div>
-                    </div>
-                    <Button variant="ghost" size="sm">
-                      Visit Store
-                    </Button>
-                  </div>
-                </Card>
-              </Link>
-            )}
-
-            {/* Quantity & Add to Cart */}
-            <div className="mt-6 space-y-4">
-              <div className="flex items-center gap-4">
-                <span className="font-medium">Quantity:</span>
-                <div className="flex items-center border rounded-lg">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+            {/* Quantity selector */}
+            {product.stock > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Quantity</p>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setQuantity(q => Math.max(1, q - 1))}
+                    className="h-9 w-9 rounded-lg border flex items-center justify-center hover:bg-accent disabled:opacity-50"
                     disabled={quantity <= 1}
                   >
                     <Minus className="h-4 w-4" />
-                  </Button>
-                  <span className="w-12 text-center font-medium">{quantity}</span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
+                  </button>
+                  <span className="w-12 text-center font-bold text-lg">{quantity}</span>
+                  <button
+                    onClick={() => setQuantity(q => Math.min(product.stock, q + 1))}
+                    className="h-9 w-9 rounded-lg border flex items-center justify-center hover:bg-accent disabled:opacity-50"
                     disabled={quantity >= product.stock}
                   >
                     <Plus className="h-4 w-4" />
-                  </Button>
+                  </button>
+                  <span className="text-sm text-muted-foreground">
+                    Total: <span className="font-semibold text-primary">₦{(product.price * quantity).toLocaleString()}</span>
+                  </span>
                 </div>
               </div>
+            )}
 
-              <div className="flex gap-4">
-                <Button
-                  size="lg"
-                  className="flex-1"
-                  onClick={handleAddToCart}
-                  disabled={product.stock === 0}
-                >
-                  <ShoppingCart className="h-5 w-5 mr-2" />
-                  Add to Cart
-                </Button>
-                <Button
-                  size="lg"
-                  variant="secondary"
-                  className="flex-1"
-                  disabled={product.stock === 0}
-                  onClick={() => {
-                    handleAddToCart()
-                    window.location.href = "/cart"
-                  }}
-                >
-                  Buy Now
-                </Button>
-              </div>
+            {/* Action buttons */}
+            <div className="flex gap-3">
+              {product.stock > 0 ? (
+                <>
+                  <Button
+                    onClick={handleAddToCart}
+                    variant="outline"
+                    className="flex-1 gap-2"
+                  >
+                    <ShoppingCart className="h-4 w-4" />
+                    {addedToCart ? "✓ Added!" : "Add to Cart"}
+                  </Button>
+                  <Button onClick={handleBuyNow} className="flex-1">
+                    Buy Now
+                  </Button>
+                </>
+              ) : (
+                <Button disabled className="flex-1">Out of Stock</Button>
+              )}
+              <button
+                onClick={handleShare}
+                className="h-10 w-10 rounded-lg border flex items-center justify-center hover:bg-accent transition-colors flex-shrink-0"
+              >
+                <Share2 className="h-4 w-4" />
+              </button>
             </div>
 
-            {/* Trust Badges */}
-            <div className="grid grid-cols-3 gap-4 mt-8 pt-6 border-t">
-              <div className="text-center">
-                <Truck className="h-8 w-8 mx-auto mb-2 text-primary" />
-                <p className="text-sm font-medium">Free Delivery</p>
-                <p className="text-xs text-muted-foreground">On orders over NGN 10,000</p>
-              </div>
-              <div className="text-center">
-                <Shield className="h-8 w-8 mx-auto mb-2 text-primary" />
-                <p className="text-sm font-medium">Quality Assured</p>
-                <p className="text-xs text-muted-foreground">100% fresh produce</p>
-              </div>
-              <div className="text-center">
-                <RotateCcw className="h-8 w-8 mx-auto mb-2 text-primary" />
-                <p className="text-sm font-medium">Easy Returns</p>
-                <p className="text-xs text-muted-foreground">7-day return policy</p>
-              </div>
+            {/* Trust badges */}
+            <div className="grid grid-cols-3 gap-3 py-4 border-y">
+              {[
+                { icon: Shield, label: "Verified Vendor" },
+                { icon: Truck, label: "24-48hr Delivery" },
+                { icon: Package, label: "Fresh Produce" },
+              ].map(({ icon: Icon, label }) => (
+                <div key={label} className="flex flex-col items-center gap-1 text-center">
+                  <Icon className="h-5 w-5 text-primary" />
+                  <span className="text-xs text-muted-foreground">{label}</span>
+                </div>
+              ))}
             </div>
+
+            {/* Vendor card */}
+            {vendor && (
+              <div className="p-4 rounded-xl border bg-card">
+                <p className="text-xs text-muted-foreground mb-2 font-medium uppercase tracking-wide">Sold by</p>
+                <div className="flex items-center gap-3">
+                  {vendor.avatar ? (
+                    <Image src={vendor.avatar} alt={vendor.farmName} width={44} height={44} className="rounded-full object-cover h-11 w-11" />
+                  ) : (
+                    <div className="h-11 w-11 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                      {vendor.farmName.charAt(0)}
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold truncate">{vendor.farmName}</p>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <MapPin className="h-3 w-3" />{vendor.location}
+                    </p>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                      <span className="text-xs font-medium">{vendor.rating}</span>
+                      <span className="text-xs text-muted-foreground">({vendor.totalReviews} reviews)</span>
+                    </div>
+                  </div>
+                  <Link href={`/vendors/${vendor.id}`}>
+                    <Button size="sm" variant="outline">View Store</Button>
+                  </Link>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Product Details Tabs */}
-        <Tabs defaultValue="details" className="mb-12">
-          <TabsList>
-            <TabsTrigger value="details">Details</TabsTrigger>
-            <TabsTrigger value="specifications">Specifications</TabsTrigger>
-            <TabsTrigger value="reviews">Reviews ({product.reviews})</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="details" className="mt-6">
-            <Card className="p-6">
-              <h3 className="font-semibold text-lg mb-4">Product Description</h3>
-              <p className="text-muted-foreground">
-                {product.description}
-              </p>
-              <Separator className="my-6" />
-              <h4 className="font-semibold mb-2">Key Features</h4>
-              <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                <li>Fresh from the farm</li>
-                <li>Carefully selected and quality checked</li>
-                {product.organic && <li>100% Organic - No pesticides or chemicals</li>}
-                <li>Sustainably grown</li>
-                <li>Direct from local farmers</li>
-              </ul>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="specifications" className="mt-6">
-            <Card className="p-6">
-              <h3 className="font-semibold text-lg mb-4">Product Specifications</h3>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="flex justify-between py-2 border-b">
-                  <span className="text-muted-foreground">Category</span>
-                  <span className="font-medium">{product.category}</span>
-                </div>
-                <div className="flex justify-between py-2 border-b">
-                  <span className="text-muted-foreground">Unit</span>
-                  <span className="font-medium">{product.unit}</span>
-                </div>
-                <div className="flex justify-between py-2 border-b">
-                  <span className="text-muted-foreground">Organic</span>
-                  <span className="font-medium">{product.organic ? "Yes" : "No"}</span>
-                </div>
-                <div className="flex justify-between py-2 border-b">
-                  <span className="text-muted-foreground">Stock</span>
-                  <span className="font-medium">{product.stock} available</span>
-                </div>
-                <div className="flex justify-between py-2 border-b">
-                  <span className="text-muted-foreground">Vendor</span>
-                  <span className="font-medium">{vendor?.farmName}</span>
-                </div>
-                <div className="flex justify-between py-2 border-b">
-                  <span className="text-muted-foreground">Location</span>
-                  <span className="font-medium">{vendor?.location}</span>
-                </div>
-              </div>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="reviews" className="mt-6">
-            <Card className="p-6">
-              <div className="flex items-center gap-6 mb-6">
-                <div className="text-center">
-                  <div className="text-4xl font-bold">{product.rating.toFixed(1)}</div>
-                  <div className="flex items-center justify-center my-2">
-                    {[...Array(5)].map((_, i) => (
-                      <Star
-                        key={i}
-                        className={`h-5 w-5 ${
-                          i < Math.floor(product.rating)
-                            ? "fill-yellow-400 text-yellow-400"
-                            : "text-gray-300"
-                        }`}
-                      />
-                    ))}
+        {/* Description */}
+        <div className="mb-12">
+          <h2 className="text-xl font-bold mb-4">Product Description</h2>
+          <Card>
+            <CardContent className="p-6">
+              <p className="text-muted-foreground leading-relaxed">{product.description}</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t">
+                {[
+                  { label: "Category", value: product.category },
+                  { label: "Unit", value: product.unit },
+                  { label: "Stock", value: `${product.stock} units` },
+                  { label: "Type", value: product.organic ? "Organic" : "Conventional" },
+                ].map(({ label, value }) => (
+                  <div key={label}>
+                    <p className="text-xs text-muted-foreground mb-1">{label}</p>
+                    <p className="font-medium text-sm">{value}</p>
                   </div>
-                  <div className="text-sm text-muted-foreground">
-                    Based on {product.reviews} reviews
-                  </div>
-                </div>
-                <Separator orientation="vertical" className="h-24" />
-                <div className="flex-1">
-                  <p className="text-muted-foreground">
-                    Customer reviews will be displayed here. Be the first to review this product!
-                  </p>
-                  <Button className="mt-4">Write a Review</Button>
-                </div>
+                ))}
               </div>
-            </Card>
-          </TabsContent>
-        </Tabs>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Related Products */}
         {relatedProducts.length > 0 && (
           <div>
-            <h2 className="text-2xl font-bold mb-6">You May Also Like</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {relatedProducts.map(relProduct => (
-                <Card key={relProduct.id} className="group overflow-hidden">
-                  <div className="relative aspect-square">
-                    <Link href={`/products/${relProduct.id}`}>
-                      <Image
-                        src={relProduct.images[0] || "/placeholder.svg"}
-                        alt={relProduct.name}
-                        fill
-                        className="object-cover transition-transform group-hover:scale-105"
-                      />
-                    </Link>
-                  </div>
-                  <CardContent className="p-4">
-                    <Link href={`/products/${relProduct.id}`}>
-                      <h3 className="font-semibold hover:text-primary transition-colors line-clamp-1">
-                        {relProduct.name}
-                      </h3>
-                    </Link>
-                    <div className="flex items-center gap-1 mt-2">
-                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                      <span className="text-sm">{relProduct.rating.toFixed(1)}</span>
-                    </div>
-                    <p className="text-lg font-bold text-primary mt-2">
-                      NGN {relProduct.price.toLocaleString()}
-                    </p>
-                  </CardContent>
-                </Card>
-              ))}
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold">Related Products</h2>
+              <Link href={`/marketplace?category=${product.category.toLowerCase()}`} className="text-sm text-primary hover:underline">
+                View all
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {relatedProducts.map(rel => {
+                const relVendor = vendors.find(v => v.id === rel.vendorId)
+                const relLiked = likedProducts.includes(rel.id)
+                return (
+                  <Link key={rel.id} href={`/product/${rel.id}`}>
+                    <Card className="group hover:shadow-lg transition-all duration-300 overflow-hidden">
+                      <div className="aspect-square relative overflow-hidden bg-muted">
+                        {rel.images[0] ? (
+                          <Image src={rel.images[0]} alt={rel.name} fill className="object-cover group-hover:scale-105 transition-transform duration-300" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Package className="h-10 w-10 text-muted-foreground" />
+                          </div>
+                        )}
+                        <button
+                          onClick={e => { e.preventDefault(); toggleLike(rel.id) }}
+                          className="absolute top-2 right-2 h-7 w-7 rounded-full bg-white/80 hover:bg-white flex items-center justify-center"
+                        >
+                          <Heart className={`h-3.5 w-3.5 ${relLiked ? "fill-red-500 text-red-500" : "text-gray-600"}`} />
+                        </button>
+                      </div>
+                      <CardContent className="p-3">
+                        <p className="font-medium text-sm truncate group-hover:text-primary">{rel.name}</p>
+                        <p className="text-xs text-muted-foreground truncate mb-1">{relVendor?.farmName}</p>
+                        <p className="font-bold text-primary text-sm">₦{rel.price.toLocaleString()}<span className="text-xs font-normal text-muted-foreground">/{rel.unit}</span></p>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                )
+              })}
             </div>
           </div>
         )}
