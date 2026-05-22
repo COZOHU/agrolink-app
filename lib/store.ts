@@ -724,7 +724,8 @@ export const useStore = create<StoreState>()(
       },
     }),
     {
-      name: 'agrolink-storage',
+     name: 'agrolink-storage',
+      skipHydration: true,
       partialize: (state) => ({
         users: state.users,
         vendors: state.vendors,
@@ -741,14 +742,61 @@ export const useStore = create<StoreState>()(
 
 // Categories data
 export const CATEGORIES = [
-  { id: 'vegetables', name: 'Vegetables', icon: '🥬' },
-  { id: 'fruits', name: 'Fruits', icon: '🍎' },
-  { id: 'grains', name: 'Grains', icon: '🌾' },
-  { id: 'poultry', name: 'Poultry', icon: '🍗' },
-  { id: 'dairy', name: 'Dairy', icon: '🥛' },
-  { id: 'meat', name: 'Meat', icon: '🥩' },
-  { id: 'fish', name: 'Fish', icon: '🐟' },
-  { id: 'herbs', name: 'Herbs & Spices', icon: '🌿' },
+  {
+    id: 'vegetables',
+    name: 'Vegetables',
+    icon: '🥬',
+    description: 'Fresh vegetables straight from the farm',
+    subcategories: ['Tomatoes', 'Spinach', 'Carrots', 'Pepper', 'Onions', 'Cabbage'],
+  },
+  {
+    id: 'fruits',
+    name: 'Fruits',
+    icon: '🍎',
+    description: 'Seasonal fruits picked at peak ripeness',
+    subcategories: ['Oranges', 'Mangoes', 'Watermelon', 'Pineapple', 'Bananas', 'Pawpaw'],
+  },
+  {
+    id: 'grains',
+    name: 'Grains & Cereals',
+    icon: '🌾',
+    description: 'Rice, beans, maize and other staple grains',
+    subcategories: ['Rice', 'Beans', 'Maize', 'Millet', 'Sorghum', 'Groundnuts'],
+  },
+  {
+    id: 'poultry',
+    name: 'Poultry',
+    icon: '🍗',
+    description: 'Fresh poultry and egg products',
+    subcategories: ['Chicken', 'Turkey', 'Duck', 'Eggs', 'Quail'],
+  },
+  {
+    id: 'dairy',
+    name: 'Dairy',
+    icon: '🥛',
+    description: 'Fresh milk and dairy products',
+    subcategories: ['Fresh Milk', 'Yoghurt', 'Cheese', 'Butter'],
+  },
+  {
+    id: 'meat',
+    name: 'Meat',
+    icon: '🥩',
+    description: 'Fresh beef, goat, and other meats',
+    subcategories: ['Beef', 'Goat', 'Pork', 'Lamb'],
+  },
+  {
+    id: 'fish',
+    name: 'Fish & Seafood',
+    icon: '🐟',
+    description: 'Fresh and smoked fish from local waters',
+    subcategories: ['Catfish', 'Tilapia', 'Mackerel', 'Crayfish', 'Smoked Fish'],
+  },
+  {
+    id: 'herbs',
+    name: 'Herbs & Spices',
+    icon: '🌿',
+    description: 'Fresh and dried herbs and spices',
+    subcategories: ['Ginger', 'Garlic', 'Turmeric', 'Pepper', 'Cinnamon'],
+  },
 ]
-
 export const UNITS = ['kg', 'g', 'bunch', 'piece', 'dozen', 'crate', 'bag', 'basket', 'litre']
